@@ -3,6 +3,10 @@
 #import numpy as np  # linear algebra
 #import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
+import minizinc
+
+# Ahí hay ejemplos de uso de minizinc-Python
+# https://minizinc-python.readthedocs.io/en/latest/
 
 
 def check_solution(node_count, edges, solution):
@@ -30,7 +34,30 @@ def solve_it(input_data):
         line = lines[i]
         parts = line.split()
         edges.append((int(parts[0]), int(parts[1])))
+    
+    
+    # Create a MiniZinc model
+    model = minizinc.Model()
+    model.add_string("""
+    var -100..100: x;
+    int: a; int: b; int: c;
+    constraint a*(x*x) + b*x = c;
+    solve satisfy;
+    """)
 
+    # Transform Model into a instance
+    gecode = minizinc.Solver.lookup("gecode")
+    inst = minizinc.Instance(gecode, model)
+    inst["a"] = 1
+    inst["b"] = 0
+    inst["c"] = 4
+
+    # Solve the instance
+    result = inst.solve(all_solutions=True)
+    for i in range(len(result)):
+        print("x = {}".format(result[i, "x"]))
+
+        
     # build a trivial solution
     # every node has its own color
     solution = range(0, node_count)
