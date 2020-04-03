@@ -5,7 +5,6 @@
 import os
 from minizinc import Instance, Model, Solver
 import csv
-import collections
 from IPython.display import FileLink
 
 # Ahí hay ejemplos de uso de minizinc-Python
