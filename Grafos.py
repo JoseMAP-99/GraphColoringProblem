@@ -31,52 +31,37 @@ def check_solution(node_count, edges, solution):
     return value
 
 
-def initializeMinizinc(LOWER, maximo, inicios, finales, edge_count, node_count):
+def initializeMinizinc(maximo, inicios, finales, edge_count, node_count):
     # Create a MiniZinc model
     model = Model()
 
-    if LOWER:
-        model.add_string("""
-                include "globals.mzn";
-                int: e;
-                int: n;
-                set of int: nodes;
-                array[1..e] of int: Inicio;
-                array[1..e] of int: Final;
-                array[0..n] of var nodes: Des;
-                       
-                constraint forall(i in 1..e)(Des[Inicio[i]] != Des[Final[i]]);
-                constraint forall(x,j in 0..n-1 where j = x+1)(value_precede(x, j, Des));
-                
-                solve minimize max(Des);     
-                """)
+    model.add_string("""
+            include "globals.mzn";
+            int: e;
+            int: n;
+            int: m;
+            set of int: nodes = 0..m;
+            array[1..e] of int: Inicio;
+            array[1..e] of int: Final;
+            array[0..n] of var nodes: Des;
+            
+            var nodes: colors;
+                    
+            constraint Des[0] == 0 /\ 
+            forall(i in index_set(Inicio))(Des[Inicio[i]] != Des[Final[i]]) /\ 
+            forall(x, y in index_set(Des) where y = x+1)(value_precede(x, y, Des)) /\ 
+            max(Des) == colors;
+            
+            solve minimize colors;     
+            """)
 
-        # Transform Model into a instance
-        gecode = Solver.lookup("gecode")
-        inst = Instance(gecode, model)
-        inst["nodes"] = range(0, maximo)
-    else:
-        model.add_string("""
-                include "globals.mzn";
-                int: e;
-                int: n;
-                set of int: nodes;
-                array[1..e] of int: Inicio;
-                array[1..e] of int: Final;
-                array[0..n] of var nodes: Des;
-                
-                constraint forall(i in 1..e)(Des[Inicio[i]] != Des[Final[i]]);                       
-
-                solve satisfy;     
-                """)
-
-        # Transform Model into a instance
-        gecode = Solver.lookup("gecode")
-        inst = Instance(gecode, model)
-        inst["nodes"] = range(0, node_count-1)
+    # Transform Model into a instance
+    gecode = Solver.lookup("gecode")
+    inst = Instance(gecode, model)
 
     inst["e"] = edge_count
     inst["n"] = node_count - 1
+    inst["m"] = maximo
 
     inst["Inicio"] = inicios
     inst["Final"] = finales
@@ -106,9 +91,6 @@ def solve_it(input_data):
         inicio.append(int(parts[0]))
         final.append(int(parts[1]))
 
-    # inicioSin = list(set(inicio.copy()))
-    # inicioSinFin = [-1]*(node_count)
-
     freq = collections.Counter(inicio)
 
     if edge_count == (node_count * (node_count - 1) / 2):
@@ -116,16 +98,10 @@ def solve_it(input_data):
     else:
         maximo = max(freq.values()) + 1
 
-    # for i in range(0, len(inicioSin)):
-    #    inicioSinFin[inicioSin[i]] = inicioSin[i]
-
-    if edge_count < 1100:
-        solution = initializeMinizinc(True, maximo, inicio, final, edge_count, node_count)
+    if edge_count < 1200:
+        solution = initializeMinizinc(maximo, inicio, final, edge_count, node_count)
     else:
-        solution = initializeMinizinc(False, maximo, inicio, final, edge_count, node_count)
-
-    # build a trivial solution
-    # every node has its own color
+        solution = initializeMinizinc(maximo, inicio, final, edge_count, node_count)
 
     # prepare the solution in the specified output format
     output_data = str(node_count) + ' ' + str(0) + '\n'
