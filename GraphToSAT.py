@@ -1,12 +1,12 @@
 import collections
 import time
-
 import pymzn
 from IPython.display import FileLink
 import os
 import csv
 from itertools import combinations
 from Functions.MultiSAT import execute
+from multiprocessing import Process, Queue
 
 
 def submission_generation(filename, str_output):
@@ -157,7 +157,7 @@ def solve_it(input_data):
     taken = list(a[0].get('Des').values())
     solution = check_solution(edges, taken)
 
-    if edge_count > 1200:
+        if edge_count > 1200:
         resU = True
         dictResU = {}
         upperColor = solution - 1
@@ -172,7 +172,23 @@ def solve_it(input_data):
             cl = getTypes(edges, node_count, upperColor)
 
             print("aqui")
-            resU, dictR = execute(cl)
+            que = Queue()
+            t = Process(target=execute, args=(cl, que,))
+            t.start()
+            t.join(timeout=100)
+
+            if t.is_alive():
+                t.kill()
+                t.join()
+
+            if not que.empty():
+                ax = que.get()
+                resU = ax[0]
+                dictR = ax[1]
+            else:
+                resU = False
+                dictR = None
+
             print("aca")
 
             if dictR:
